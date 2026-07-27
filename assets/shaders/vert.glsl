@@ -11,7 +11,7 @@ uniform vec3 uPosOffset;
 
 void main()
 {
-    vec3 finalPosition = aPos + uPosOffset;
+    vec3 finalPosition = aPos;// + uPosOffset;
     position = finalPosition;
     gl_Position = vec4(finalPosition, 1.0);
     vertexColor = aColor;

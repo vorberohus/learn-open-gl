@@ -233,8 +233,8 @@ int main()
 		//position         //color           //texture coords
         0.5f,  0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,// top right
         0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,// bottom right
-        0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,// bottom left
-        0.0f,  0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,// top left 
+        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,// bottom left
+        -0.5f,  0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,// top left 
     };
 
     uint32 quadIndices[] = {  // note that we start from 0!
@@ -322,29 +322,27 @@ int main()
         float greenValue = (-cos(timeValue) / 2.0f) + 0.5f;
 		int32 cycles = timeValue / (3.14159f);        
 
-        triangle1Vertices[3 + cycles % 3] = cycles % 2 == 0 ? 1 - greenValue : greenValue;
-        triangle1Vertices[3 + (1 + cycles) % 3] = cycles % 2 == 0 ? greenValue : 1 - greenValue;
-        
-        triangle1Vertices[9 + (1 + cycles) % 3] = cycles % 2 == 0 ? 1 - greenValue : greenValue;
-        triangle1Vertices[9 + (2 + cycles) % 3] = cycles % 2 == 0 ? greenValue : 1 - greenValue;
-        
-        triangle1Vertices[15 + (2 + cycles) % 3] = cycles % 2 == 0 ? 1 - greenValue : greenValue;
-        triangle1Vertices[15 + (3 + cycles) % 3] = cycles % 2 == 0 ? greenValue : 1 - greenValue;
-
-        glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(triangle1Vertices), triangle1Vertices, GL_STREAM_DRAW);
+        //triangle1Vertices[3 + cycles % 3] = cycles % 2 == 0 ? 1 - greenValue : greenValue;
+        //triangle1Vertices[3 + (1 + cycles) % 3] = cycles % 2 == 0 ? greenValue : 1 - greenValue;
+        //
+        //triangle1Vertices[9 + (1 + cycles) % 3] = cycles % 2 == 0 ? 1 - greenValue : greenValue;
+        //triangle1Vertices[9 + (2 + cycles) % 3] = cycles % 2 == 0 ? greenValue : 1 - greenValue;
+        //
+        //triangle1Vertices[15 + (2 + cycles) % 3] = cycles % 2 == 0 ? 1 - greenValue : greenValue;
+        //triangle1Vertices[15 + (3 + cycles) % 3] = cycles % 2 == 0 ? greenValue : 1 - greenValue;
+        //
+        //glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
+        //glBufferData(GL_ARRAY_BUFFER, sizeof(triangle1Vertices), triangle1Vertices, GL_STREAM_DRAW);
         //glUniform3f(posOffsetLocation, greenValue, 0.0f, 0.0f);
         
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        //glDrawArrays(GL_TRIANGLES, 0, 6);
+        
+        //glUseProgram(shader2Program);
+        //glBindVertexArray(triangle2VAO);
+        //glDrawArrays(GL_TRIANGLES, 0, 6);        
 
-        glUseProgram(shader2Program);
-        glBindVertexArray(triangle2VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        glUseProgram(shader1Program);
-
-		//glBindVertexArray(quadVAO);
-		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(quadVAO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
