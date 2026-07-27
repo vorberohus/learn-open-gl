@@ -1,0 +1,9 @@
+*.exe
+*.ilk
+*.log
+*.pdb
+*.recipe
+*.idb
+/learn-open-gl
+/x64
+/.vs
