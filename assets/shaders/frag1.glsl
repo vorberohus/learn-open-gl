@@ -6,10 +6,11 @@ in vec2 texCoord;
 
 out vec4 FragColor;
 
-uniform sampler2D baseMap;
+uniform sampler2D uBaseMap;
+uniform sampler2D uAuxMap;
+uniform float uMixAlpha;
 
 void main()
 {
-    FragColor = texture(baseMap, texCoord) * vec4(texCoord, 0.0, 1.0);
-    //vec4(vertexColor, 1.0);
+    FragColor = mix(texture(uBaseMap, texCoord), texture(uAuxMap, vec2(1 - texCoord.x, texCoord.y)), uMixAlpha);
 }

@@ -30,6 +30,8 @@ struct debug_read_file_result
     uint32 contentsSize;
 };
 
+static float mixAlpha = 0.5f;
+
 inline uint32
 SafeTruncateUInt64(uint64 value)
 {
@@ -46,16 +48,29 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile);
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
 DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory);
 
-
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
 
-void processInput(GLFWwindow* window)
+static void processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+    {
+        mixAlpha += 0.01f;
+        if (mixAlpha > 1.0f)
+            mixAlpha = 1.0f;
+	}
+
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+    {
+        mixAlpha -= 0.01f;
+        if (mixAlpha < 0.0f)
+            mixAlpha = 0.0f;
+	}
 }
 
 static bool32 CreateVertexProgram(const char *vertFileName, _Out_ uint32 *o_vertShader)
@@ -285,33 +300,61 @@ int main()
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
+    glEnableVertexAttribArray(2);	
 
-	int32 posOffsetLocation = glGetUniformLocation(shader1Program, "uPosOffset");
+    stbi_set_flip_vertically_on_load(true);
 
     int width, height, nrChannels;
-    unsigned char* data = stbi_load("assets/fire.jpg", &width, &height, &nrChannels, 0);    
-    Assert(data);
 
-	uint32 texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
+    unsigned char* texture1Data = stbi_load("assets/fire.jpg", &width, &height, &nrChannels, 0);    
+    Assert(texture1Data);
+
+	uint32 texture1;
+	glGenTextures(1, &texture1);
+	glBindTexture(GL_TEXTURE_2D, texture1);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture1Data);
 	glGenerateMipmap(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, texture);
 
-	stbi_image_free(data);
+	stbi_image_free(texture1Data);
+
+    unsigned char* texture2Data = stbi_load("assets/letter_b.jpg", &width, &height, &nrChannels, 0);
+    Assert(texture2Data);
+    uint32 texture2;
+    glGenTextures(1, &texture2);
+    glBindTexture(GL_TEXTURE_2D, texture2);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture2Data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(texture2Data);
+
+	glUseProgram(shader1Program);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+
+    int32 baseMapLoc = glGetUniformLocation(shader1Program, "uBaseMap");
+    int32 auxMapLoc = glGetUniformLocation(shader1Program, "uAuxMap");
+	glUniform1i(baseMapLoc, 0);
+	glUniform1i(auxMapLoc, 1);
+
+    int32 mixAlphaLoc = glGetUniformLocation(shader1Program, "uMixAlpha");
 
     while (!glfwWindowShouldClose(window))
     {
 		processInput(window);
-
+        glUniform1f(mixAlphaLoc, mixAlpha);
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);       		
                 
