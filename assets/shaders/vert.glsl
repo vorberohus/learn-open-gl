@@ -7,13 +7,14 @@ out vec3 vertexColor;
 out vec3 position;
 out vec2 texCoord;
 
-uniform vec3 uPosOffset;
+uniform mat4 uTransform;
 
 void main()
 {
-    vec3 finalPosition = aPos;// + uPosOffset;
-    position = finalPosition;
-    gl_Position = vec4(finalPosition, 1.0);
     vertexColor = aColor;
     texCoord = aTexCoord;
+
+    vec3 finalPosition = aPos;
+    position = finalPosition;
+    gl_Position = uTransform * vec4(finalPosition, 1.0);
 }

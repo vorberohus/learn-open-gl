@@ -3,6 +3,11 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <stdint.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -204,7 +209,7 @@ int main()
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
-    }        
+    }       
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
@@ -350,6 +355,12 @@ int main()
 	glUniform1i(auxMapLoc, 1);
 
     int32 mixAlphaLoc = glGetUniformLocation(shader1Program, "uMixAlpha");
+	int32 transformLoc = glGetUniformLocation(shader1Program, "uTransform");
+
+    glm::mat4 trans = glm::mat4(1.0f);    
+    trans = glm::rotate(trans, glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	trans = glm::scale(trans, glm::vec3(0.5f, 0.5f, 0.5f));
+	glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
     while (!glfwWindowShouldClose(window))
     {
@@ -364,7 +375,7 @@ int main()
         float timeValue = glfwGetTime();
         float greenValue = (-cos(timeValue) / 2.0f) + 0.5f;
 		int32 cycles = timeValue / (3.14159f);        
-
+        
         //triangle1Vertices[3 + cycles % 3] = cycles % 2 == 0 ? 1 - greenValue : greenValue;
         //triangle1Vertices[3 + (1 + cycles) % 3] = cycles % 2 == 0 ? greenValue : 1 - greenValue;
         //
@@ -385,7 +396,22 @@ int main()
         //glDrawArrays(GL_TRIANGLES, 0, 6);        
 
 		glBindVertexArray(quadVAO);
+
+        glm::mat4 trans = glm::mat4(1.0f);
+
+        trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+        trans = glm::rotate(trans, timeValue, glm::vec3(0.0f, 0.0f, 1.0f));
+        trans = glm::scale(trans, glm::vec3(0.5f, 0.5f, 0.5f));
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		float scaleValue = sin(timeValue);
+
+        trans = glm::mat4(1.0f);        
+        trans = glm::translate(trans, glm::vec3(-0.5f, 0.5f, 0.0f));       
+        trans = glm::scale(trans, glm::vec3(scaleValue, scaleValue, scaleValue));
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

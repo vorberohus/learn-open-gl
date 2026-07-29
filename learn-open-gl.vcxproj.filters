@@ -27,9 +27,4 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <Image Include="assets\fire.jpg">
-      <Filter>Файлы ресурсов</Filter>
-    </Image>
-  </ItemGroup>
 </Project>
