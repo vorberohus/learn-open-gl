@@ -7,7 +7,9 @@ out vec3 vertexColor;
 out vec3 position;
 out vec2 texCoord;
 
-uniform mat4 uTransform;
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProjection;
 
 void main()
 {
@@ -16,5 +18,5 @@ void main()
 
     vec3 finalPosition = aPos;
     position = finalPosition;
-    gl_Position = uTransform * vec4(finalPosition, 1.0);
+    gl_Position = uProjection * uView * uModel * vec4(finalPosition, 1.0);
 }
