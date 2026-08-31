@@ -9,8 +9,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
 
 #define Assert(expression)                                                     \
   if (!(expression)) {                                                         \
@@ -36,7 +36,7 @@ struct debug_read_file_result {
 
 struct input_state {
   double mousePosX;
-  double mousePosY;  
+  double mousePosY;
   float normalizedMousePosX;
   float normalizedMousePosY;
   bool32 wKeyDown;
@@ -58,16 +58,21 @@ struct input_delta {
   int32 downKey;
 };
 
+struct game_state {
+  input_state input[2];
+  input_state *currentInput;
+  input_state *prevInput;
+  input_delta inputDelta;
+};
+
 static float mixAlpha = 0.5f;
 
-static input_state inputState = {};
-static input_state prevInputState = {};
-static input_delta inputDelta = {};
+static game_state gameState = {};
 
 static int screenWidth = 1920;
 static int screenHeight = 1080;
 
-//static char debugConsoleBuffer[];
+// static char debugConsoleBuffer[];
 
 inline uint32 SafeTruncateUInt64(uint64 value) {
   Assert(value < 0xFFFFFFFF);
@@ -86,41 +91,45 @@ DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory);
 
 static void framebuffer_size_callback(GLFWwindow *window, int width,
                                       int height) {
-    screenWidth = width;
-    screenHeight = height;
+  screenWidth = width;
+  screenHeight = height;
 
-    glViewport(0, 0, width, height);
+  glViewport(0, 0, width, height);
 }
 
-static void copyInputState(input_state *source, input_state *dest)
-{
-    dest->mousePosX = source->mousePosX;
-    dest->mousePosY = source->mousePosY;
-    dest->wKeyDown = source->wKeyDown;
-    dest->aKeyDown = source->aKeyDown;
-    dest->sKeyDown = source->sKeyDown;
-    dest->dKeyDown = source->dKeyDown;
-    dest->upKeyDown = source->upKeyDown;
-    dest->downKeyDown = source->downKeyDown;    
+static void copyInputState(input_state *source, input_state *dest) {
+  dest->mousePosX = source->mousePosX;
+  dest->mousePosY = source->mousePosY;
+  dest->wKeyDown = source->wKeyDown;
+  dest->aKeyDown = source->aKeyDown;
+  dest->sKeyDown = source->sKeyDown;
+  dest->dKeyDown = source->dKeyDown;
+  dest->upKeyDown = source->upKeyDown;
+  dest->downKeyDown = source->downKeyDown;
 }
 
-static input_delta getInputStateDelta(input_state* current, input_state* prev)
-{
-    input_delta result = {};
+static input_delta getInputStateDelta(input_state *current, input_state *prev) {
+  input_delta result = {};
 
-    result.mouseDeltaX = current->mousePosX - prev->mousePosX;
-    result.mouseDeltaY = current->mousePosY - prev->mousePosY;
-    result.wKey = current->wKeyDown - prev->wKeyDown;
-    result.aKey = current->aKeyDown - prev->aKeyDown;
-    result.sKey = current->sKeyDown - prev->sKeyDown;
-    result.dKey = current->dKeyDown - prev->dKeyDown;
-    result.upKey = current->upKeyDown - prev->upKeyDown;
-    result.downKey = current->downKeyDown - prev->downKeyDown;
+  result.mouseDeltaX = current->mousePosX - prev->mousePosX;
+  result.mouseDeltaY = current->mousePosY - prev->mousePosY;
+  result.wKey = current->wKeyDown - prev->wKeyDown;
+  result.aKey = current->aKeyDown - prev->aKeyDown;
+  result.sKey = current->sKeyDown - prev->sKeyDown;
+  result.dKey = current->dKeyDown - prev->dKeyDown;
+  result.upKey = current->upKeyDown - prev->upKeyDown;
+  result.downKey = current->downKeyDown - prev->downKeyDown;
 
-    return (result);
+  return (result);
 }
 
-static void processInput(GLFWwindow *window, input_state *inputState, input_state *prev) {
+static void processInput(GLFWwindow *window, game_state *gameState) {
+  input_state *temp = gameState->prevInput;
+  gameState->prevInput = gameState->currentInput;
+  gameState->currentInput = temp;
+
+  input_state *inputState = gameState->currentInput;
+
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
 
@@ -135,20 +144,17 @@ static void processInput(GLFWwindow *window, input_state *inputState, input_stat
     if (mixAlpha < 0.0f)
       mixAlpha = 0.0f;
   }
-  
+
   inputState->wKeyDown = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
   inputState->sKeyDown = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
   inputState->aKeyDown = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
   inputState->dKeyDown = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
   inputState->upKeyDown = glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS;
   inputState->downKeyDown = glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS;
-  glfwGetCursorPos(window, &inputState->mousePosX, &inputState->mousePosY);
-  
-  inputState->normalizedMousePosX = (float)(inputState->mousePosX / screenWidth);
-  inputState->normalizedMousePosY = (float)(inputState->mousePosY / screenHeight);
 
-  inputDelta = getInputStateDelta(inputState, prev);
-  copyInputState(inputState, prev);
+  gameState->inputDelta =
+      getInputStateDelta(gameState->currentInput, gameState->prevInput);
+  // copyInputState(inputState, prev);
 }
 
 static bool32 CreateVertexProgram(const char *vertFileName,
@@ -278,8 +284,7 @@ public:
       : position(position), direction(direction), up(up), fov(fov),
         aspectRatio(aspectRatio), nearPlane(nearPlane), farPlane(farPlane),
         yaw(glm::degrees(atan2(direction.z, direction.x))),
-        pitch(glm::degrees(asin(direction.y))), speed(speed) {    
-  }
+        pitch(glm::degrees(asin(direction.y))), speed(speed) {}
 
   float GetSpeed() const { return speed; }
 
@@ -317,26 +322,24 @@ public:
     UpdateDirectionFromAngles();
   }
 
-  void AddYawAndPitch(float addYaw, float addPitch)
-  {
-      yaw += addYaw;
-      pitch += addPitch;
+  void AddYawAndPitch(float addYaw, float addPitch) {
+    yaw += addYaw;
+    pitch += addPitch;
 
-      UpdateDirectionFromAngles();
+    UpdateDirectionFromAngles();
   }
 
 private:
-    void UpdateDirectionFromAngles()
-    {
-        direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-        direction.y = sin(glm::radians(pitch));
-        direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-        direction = glm::normalize(direction);
-    }
+  void UpdateDirectionFromAngles() {
+    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    direction.y = sin(glm::radians(pitch));
+    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    direction = glm::normalize(direction);
+  }
 };
 
 static void updateCameraPosition(Camera *camera, const input_state *inputState,
-                          float deltaTime) {
+                                 float deltaTime) {
   const float cameraSpeed = camera->GetSpeed() * deltaTime;
   glm::vec3 position = camera->GetPosition();
   glm::vec3 direction = camera->GetDirection();
@@ -353,20 +356,33 @@ static void updateCameraPosition(Camera *camera, const input_state *inputState,
   camera->SetPosition(position);
 }
 
-static void printDebugInfo(float deltaTime)
-{
-    std::cout << "\x1b[?25l"; //hide cursor
-    std::cout << "\x1b[4A";   //move up lines
+static void cursorPosCallback(GLFWwindow *window, double xpos, double ypos) {
+  game_state *gameState = (game_state *)glfwGetWindowUserPointer(window);
+  gameState->currentInput->mousePosX = xpos;
+  gameState->currentInput->mousePosY = ypos;
+  gameState->currentInput->normalizedMousePosX =
+      (float)xpos / (float)screenWidth;
+  gameState->currentInput->normalizedMousePosY =
+      (float)ypos / (float)screenHeight;
+}
 
-    std::cout << "\r\033[K";  //clear line
-    std::cout << "Frame time: " << deltaTime * 1000.0 << '\n';
-    std::cout << "\r\033[K";
-    std::cout << "Mouse pos: " << inputState.mousePosX << ' ' << inputState.mousePosY << '\n';
-    std::cout << "\r\033[K";
-    std::cout << "Mouse pos normalized: " << inputState.normalizedMousePosX << ' ' << inputState.normalizedMousePosY << '\n';
-    std::cout << "\r\033[K";
-    std::cout << "Mouse delta: " << inputDelta.mouseDeltaX << ' ' << inputDelta.mouseDeltaY << '\n';
-    std::cout << std::flush;
+static void printDebugInfo(float deltaTime) {
+  input_state *inputState = gameState.currentInput;
+  std::cout << "\x1b[?25l"; // hide cursor
+  std::cout << "\x1b[4A";   // move up lines
+
+  std::cout << "\r\033[K"; // clear line
+  std::cout << "Frame time: " << deltaTime * 1000.0 << '\n';
+  std::cout << "\r\033[K";
+  std::cout << "Mouse pos: " << inputState->mousePosX << ' '
+            << inputState->mousePosY << '\n';
+  std::cout << "\r\033[K";
+  std::cout << "Mouse pos normalized: " << inputState->normalizedMousePosX
+            << ' ' << inputState->normalizedMousePosY << '\n';
+  std::cout << "\r\033[K";
+  std::cout << "Mouse delta: " << gameState.inputDelta.mouseDeltaX << ' '
+            << gameState.inputDelta.mouseDeltaY << '\n';
+  std::cout << std::flush;
 }
 
 // int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE
@@ -377,7 +393,8 @@ int main() {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-  GLFWwindow *window = glfwCreateWindow(screenWidth, screenHeight, "LearnOpenGL", NULL, NULL);
+  GLFWwindow *window =
+      glfwCreateWindow(screenWidth, screenHeight, "LearnOpenGL", NULL, NULL);
   if (window == NULL) {
     std::cout << "Failed to create GLFW window" << std::endl;
     glfwTerminate();
@@ -389,6 +406,12 @@ int main() {
     std::cout << "Failed to initialize GLAD" << std::endl;
     return -1;
   }
+
+  gameState.currentInput = &gameState.input[0];
+  gameState.prevInput = &gameState.input[1];
+
+  glfwSetWindowUserPointer(window, &gameState);
+  glfwSetCursorPosCallback(window, cursorPosCallback);
 
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
@@ -589,28 +612,31 @@ int main() {
   glm::mat4 modelRot = glm::mat4(1.0f);
 
   glfwSwapInterval(0);
-  
+
   float sensitivity = .1f;
-  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);  
-  processInput(window, &inputState, &prevInputState);
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+  processInput(window, &gameState);
 
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
+
     float timeValue = glfwGetTime();
 
     double currentFrame = timeValue;
     deltaTime = currentFrame - lastFrame;
-    lastFrame = currentFrame;    
+    lastFrame = currentFrame;
 
-    processInput(window, &inputState, &prevInputState);
+    processInput(window, &gameState);
 
     printDebugInfo(deltaTime);
-    
+
     float greenValue = (-cos(timeValue) / 2.0f) + 0.5f;
     int32 cycles = timeValue / pi;
 
-    updateCameraPosition(&cam, &inputState, deltaTime);
-    cam.AddYawAndPitch(sensitivity * inputDelta.mouseDeltaX, -sensitivity * inputDelta.mouseDeltaY);
+    updateCameraPosition(&cam, gameState.currentInput, deltaTime);
+    cam.AddYawAndPitch(sensitivity * gameState.inputDelta.mouseDeltaX,
+                       -sensitivity * gameState.inputDelta.mouseDeltaY);
 
     glm::mat4 view = cam.GetViewMatrix();
     glm::mat4 proj = cam.GetProjectionMatrix();
@@ -638,7 +664,7 @@ int main() {
       glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
       glDrawArrays(GL_TRIANGLES, 0, 36);
-    }    
+    }
 
     glfwSwapBuffers(window);
   }
