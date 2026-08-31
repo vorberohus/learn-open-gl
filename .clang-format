@@ -1,0 +1,22 @@
+Language: Cpp
+BasedOnStyle: LLVM
+SortIncludes: false
+
+# Put return type on its own line
+AlwaysBreakAfterReturnType: All
+
+# Brace style
+BreakBeforeBraces: Allman
+
+# Ensure functions always break
+BreakAfterReturnType: All
+
+# Prevent collapsing
+AllowShortFunctionsOnASingleLine: None
+
+ColumnLimit: 120
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
