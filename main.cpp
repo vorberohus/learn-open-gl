@@ -338,7 +338,28 @@ class Camera
     glm::mat4
     GetViewMatrix() const
     {
-        return glm::lookAt(position, position + direction, up);
+        glm::vec3 globalUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+        glm::mat4 rotation = glm::mat4(1.0f);
+        glm::vec3 right = glm::normalize(glm::cross(direction, globalUp));
+        glm::vec3 cameraUp = glm::normalize(glm::cross(right, direction));
+        
+        glm::translate(rotation, -position);
+
+        rotation[0][0] = right.x;
+        rotation[1][0] = right.y;
+        rotation[2][0] = right.z;
+        rotation[0][1] = cameraUp.x;
+        rotation[1][1] = cameraUp.y;
+        rotation[2][1] = cameraUp.z;
+        rotation[0][2] = -direction.x;
+        rotation[1][2] = -direction.y;
+        rotation[2][2] = -direction.z;
+
+        glm::mat4 translation = glm::translate(glm::mat4(1.0f), -position);
+
+        return rotation * translation;
+        //return glm::lookAt(position, position + direction, up);
     }
 
     glm::mat4
@@ -403,6 +424,7 @@ updateCameraPosition(Camera *camera, const input_state *inputState, float deltaT
     glm::vec3 position = camera->GetPosition();
     glm::vec3 direction = camera->GetDirection();
     glm::vec3 right = glm::normalize(glm::cross(direction, glm::vec3(0.0f, 1.0f, 0.0f)));
+
     if (inputState->wKeyDown)
         position += cameraSpeed * direction;
     if (inputState->sKeyDown)
@@ -704,6 +726,7 @@ main()
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[i]);
             model = glm::rotate(model, glm::radians(20.0f * i), glm::vec3(0.0f, 1.0f, 0.0f));
+
             if (i % 3 == 0)
             {
                 modelRot = glm::rotate(modelRot, glm::radians(10.0f * deltaTime), glm::vec3(0.0f, 1.0f, 0.0f));
