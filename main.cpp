@@ -9,8 +9,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 #define Assert(expression)                                                                                             \
     if (!(expression))                                                                                                 \
@@ -137,10 +137,6 @@ getInputStateDelta(input_state *current, input_state *prev)
 static void
 processInput(GLFWwindow *window, game_state *gameState)
 {
-    input_state *temp = gameState->prevInput;
-    gameState->prevInput = gameState->currentInput;
-    gameState->currentInput = temp;
-
     input_state *inputState = gameState->currentInput;
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -168,7 +164,7 @@ processInput(GLFWwindow *window, game_state *gameState)
     inputState->downKeyDown = glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS;
 
     gameState->inputDelta = getInputStateDelta(gameState->currentInput, gameState->prevInput);
-    // copyInputState(inputState, prev);
+    copyInputState(gameState->currentInput, gameState->prevInput);
 }
 
 static bool32
@@ -419,13 +415,19 @@ updateCameraPosition(Camera *camera, const input_state *inputState, float deltaT
 }
 
 static void
+inputSetMousePos(input_state *inputState, double xpos, double ypos)
+{
+    inputState->mousePosX = xpos;
+    inputState->mousePosY = ypos;
+    inputState->normalizedMousePosX = (float)xpos / (float)screenWidth;
+    inputState->normalizedMousePosY = (float)ypos / (float)screenHeight;
+}
+
+static void
 cursorPosCallback(GLFWwindow *window, double xpos, double ypos)
 {
     game_state *gameState = (game_state *)glfwGetWindowUserPointer(window);
-    gameState->currentInput->mousePosX = xpos;
-    gameState->currentInput->mousePosY = ypos;
-    gameState->currentInput->normalizedMousePosX = (float)xpos / (float)screenWidth;
-    gameState->currentInput->normalizedMousePosY = (float)ypos / (float)screenHeight;
+    inputSetMousePos(gameState->currentInput, xpos, ypos);    
 }
 
 static void
@@ -472,10 +474,17 @@ main()
         return -1;
     }
 
-    gameState.currentInput = &gameState.input[0];
-    gameState.prevInput = &gameState.input[1];
+    gameState.currentInput = &gameState.input[1];
+    gameState.prevInput = &gameState.input[0];
 
-    glfwSetWindowUserPointer(window, &gameState);
+    glfwSetWindowUserPointer(window, &gameState);    
+    
+    //Init mouse
+    double mousePosX, mousePosY;
+    glfwGetCursorPos(window, &mousePosX, &mousePosY);
+
+    inputSetMousePos(gameState.currentInput, mousePosX, mousePosY);    
+
     glfwSetCursorPosCallback(window, cursorPosCallback);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -653,9 +662,9 @@ main()
     glfwSwapInterval(0);
 
     float sensitivity = .1f;
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);            
 
-    processInput(window, &gameState);
+    processInput(window, &gameState);    
 
     while (!glfwWindowShouldClose(window))
     {
@@ -674,10 +683,10 @@ main()
         float greenValue = (-cos(timeValue) / 2.0f) + 0.5f;
         int32 cycles = timeValue / pi;
 
-        updateCameraPosition(&cam, gameState.currentInput, deltaTime);
         cam.AddYawAndPitch(sensitivity * gameState.inputDelta.mouseDeltaX,
                            -sensitivity * gameState.inputDelta.mouseDeltaY);
-
+        updateCameraPosition(&cam, gameState.currentInput, deltaTime);
+        
         glm::mat4 view = cam.GetViewMatrix();
         glm::mat4 proj = cam.GetProjectionMatrix();
 
