@@ -460,7 +460,7 @@ printDebugInfo(float deltaTime)
     std::cout << "\x1b[4A";   // move up lines
 
     std::cout << "\r\033[K"; // clear line
-    std::cout << "Frame time: " << deltaTime * 1000.0 << '\n';
+    std::cout << "Frame time: " << deltaTime * 1000.0 << " ms\n";
     std::cout << "\r\033[K";
     std::cout << "Mouse pos: " << inputState->mousePosX << ' ' << inputState->mousePosY << '\n';
     std::cout << "\r\033[K";
@@ -543,6 +543,19 @@ main()
     float triangle2Vertices[] = {0.75f, -0.5f, 0.0f, 0.35f, -0.5f, 0.0f, 0.55f, 0.5f, 0.0f};
 
     float quadVertices[] = {
+        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f,
+        0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+        0.5f,  0.5f, 0.0f, 1.0f, 1.0f,
+        -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
+    };
+
+    uint32 quadIndices[] = {
+        // note that we start from 0!
+        0, 1, 3, // first triangle
+        1, 2, 3  // second triangle
+    };
+
+    float cubeVertices[] = {
         -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 0.5f,  -0.5f, -0.5f, 1.0f, 0.0f, 0.5f,  0.5f,  -0.5f, 1.0f, 1.0f,
         0.5f,  0.5f,  -0.5f, 1.0f, 1.0f, -0.5f, 0.5f,  -0.5f, 0.0f, 1.0f, -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
 
@@ -560,21 +573,17 @@ main()
 
         -0.5f, 0.5f,  -0.5f, 0.0f, 1.0f, 0.5f,  0.5f,  -0.5f, 1.0f, 1.0f, 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
         0.5f,  0.5f,  0.5f,  1.0f, 0.0f, -0.5f, 0.5f,  0.5f,  0.0f, 0.0f, -0.5f, 0.5f,  -0.5f, 0.0f, 1.0f};
-
-    uint32 quadIndices[] = {
-        // note that we start from 0!
-        0, 1, 3, // first triangle
-        1, 2, 3  // second triangle
-    };
-
+   
     glm::vec3 cubePositions[] = {glm::vec3(0.0f, 0.0f, 0.0f),    glm::vec3(2.0f, 5.0f, -15.0f),
                                  glm::vec3(-1.5f, -2.2f, -2.5f), glm::vec3(-3.8f, -2.0f, -12.3f),
                                  glm::vec3(2.4f, -0.4f, -3.5f),  glm::vec3(-1.7f, 3.0f, -7.5f),
                                  glm::vec3(1.3f, -2.0f, -2.5f),  glm::vec3(1.5f, 2.0f, -2.5f),
                                  glm::vec3(1.5f, 0.2f, -1.5f),   glm::vec3(-1.3f, 1.0f, -1.5f)};
 
-    uint32 VBOs[4] = {};
-    glGenBuffers(4, VBOs);
+    glm::vec3 quadPosition = glm::vec3(0.0f, 0.0f, 3.0f);
+
+    uint32 VBOs[5] = {};
+    glGenBuffers(5, VBOs);
 
     // Setup triangle1 VAO and VBO
     uint32 triangle1VAO;
@@ -600,7 +609,6 @@ main()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
-    // Setup quad VAO, VBO, and EBO
     uint32 quadVAO;
     glGenVertexArrays(1, &quadVAO);
     glBindVertexArray(quadVAO);
@@ -608,8 +616,21 @@ main()
     glBindBuffer(GL_ARRAY_BUFFER, VBOs[2]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
 
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VBOs[3]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadIndices), quadIndices, GL_STATIC_DRAW);
+
+    // Setup cube VAO, VBO, and EBO
+    uint32 cubeVAO;
+    glGenVertexArrays(1, &cubeVAO);
+    glBindVertexArray(cubeVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBOs[4]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);    
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
@@ -719,7 +740,7 @@ main()
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(proj));
 
-        glBindVertexArray(quadVAO);
+        glBindVertexArray(cubeVAO);
 
         for (int i = 0; i < 10; i++)
         {
@@ -737,6 +758,14 @@ main()
 
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
+
+        glBindVertexArray(quadVAO);
+
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, quadPosition);        
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
     }
